@@ -1,0 +1,175 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // COLEÇÃO DE USUÁRIOS
+    match /users/{userId} {
+      // Permite leitura para usuários autenticados
+      allow read: if request.auth != null;
+      // Permite escrita apenas para o próprio usuário
+      allow create, delete: if request.auth.uid == userId;
+      // Permite atualizações do próprio usuário ou incrementos de friendCount
+      allow update: if request.auth.uid == userId ||
+                      (
+                        // Permite incrementar/decrementar o friendCount
+                        request.resource.data.diff(resource.data).affectedKeys().hasOnly(['friendCount']) &&
+                        (request.resource.data.friendCount == resource.data.friendCount + 1 ||
+                         request.resource.data.friendCount == resource.data.friendCount - 1)
+                      );
+     
+      // Subcoleção de configurações
+      match /settings/{settingsId} {
+        allow read, write: if request.auth.uid == userId;
+      }
+      
+      // Subcoleções do usuário
+      match /workoutPlans/{dayOfWeek} {
+        allow read, write: if request.auth.uid == userId;
+      }
+     
+      match /workoutSessions/{sessionId} {
+        allow read, write: if request.auth.uid == userId;
+      }
+     
+      match /exercisePRs/{exerciseId} {
+        allow read, write: if request.auth.uid == userId;
+      }
+     
+      match /friendRequestsReceived/{requestingUserId} {
+        allow read: if request.auth.uid == userId || request.auth.uid == requestingUserId;
+        allow create: if request.auth.uid == requestingUserId;
+        allow update, delete: if request.auth.uid == userId || request.auth.uid == requestingUserId;
+      }
+     
+      match /friends/{friendId} {
+        allow read: if request.auth.uid == userId || request.auth.uid == friendId;
+        // Permite escrita para o próprio usuário ou para o amigo (no caso de aceitar pedidos)
+        allow create, update, delete: if request.auth.uid == userId || request.auth.uid == friendId;
+      }
+     
+      match /guildInvitations/{guildId} {
+        allow read, delete: if request.auth.uid == userId;
+        allow create: if request.auth != null;
+        allow update: if request.auth.uid == userId;
+      }
+      
+      // Subcoleção para convites de cargo (mantida para compatibilidade)
+      match /guildRoleInvites/{guildId} {
+        allow read: if request.auth.uid == userId;
+        allow create: if request.auth != null;
+        allow update, delete: if request.auth.uid == userId;
+      }
+     
+      match /inventory/{inventoryId} {
+        allow read: if request.auth != null;
+        allow write: if request.auth.uid == userId;
+      }
+    }
+   
+    // COLEÇÃO DE GUILDAS
+    match /guilds/{guildId} {
+      // Permite leitura pública para o ranking
+      allow read: if true;
+      allow create: if request.auth != null && 
+                      request.resource.data.ownerId == request.auth.uid;
+      allow update, delete: if request.auth != null && 
+                              request.auth.uid == resource.data.ownerId;
+      // Permite atualizações de totalAura para membros da guilda
+      allow update: if request.auth != null && 
+                      request.resource.data.diff(resource.data).affectedKeys().hasOnly(['totalAura']) &&
+                      request.auth.uid in resource.data.members.keys();
+      // Permite que usuários se juntem à guilda (adicionar/remover members e memberCount)
+      allow update: if request.auth != null && 
+                      request.resource.data.diff(resource.data).affectedKeys().hasAll(['members']) &&
+                      (request.resource.data.diff(resource.data).affectedKeys().hasOnly(['members']) ||
+                       request.resource.data.diff(resource.data).affectedKeys().hasOnly(['members', 'memberCount']));
+                       
+      // Permite que Donos e Vice-Donos atualizem cargos dos membros e removam membros
+      allow update: if request.auth != null && 
+                      (request.resource.data.diff(resource.data).affectedKeys().hasOnly(['members']) ||
+                       request.resource.data.diff(resource.data).affectedKeys().hasOnly(['members', 'memberCount'])) &&
+                      (request.auth.uid == resource.data.ownerId ||
+                       (request.auth.uid in resource.data.members.keys() &&
+                        resource.data.members[request.auth.uid] in ['Dono', 'Vice-Dono']));
+      
+      // Subcoleção joinRequests com regras mais restritas
+      match /joinRequests/{requestId} {
+        allow read: if request.auth != null && 
+                      (request.auth.uid == requestId || 
+                       request.auth.uid == get(/databases/$(database)/documents/guilds/$(guildId)).data.ownerId ||
+                       (request.auth.uid in get(/databases/$(database)/documents/guilds/$(guildId)).data.members.keys() &&
+                        get(/databases/$(database)/documents/guilds/$(guildId)).data.members[request.auth.uid] in ['Dono', 'Vice-Dono']));
+        allow create: if request.auth != null && 
+                        request.auth.uid == requestId;
+        allow update, delete: if request.auth != null && 
+                                (request.auth.uid == requestId || 
+                                 request.auth.uid == get(/databases/$(database)/documents/guilds/$(guildId)).data.ownerId ||
+                                 (request.auth.uid in get(/databases/$(database)/documents/guilds/$(guildId)).data.members.keys() &&
+                                  get(/databases/$(database)/documents/guilds/$(guildId)).data.members[request.auth.uid] in ['Dono', 'Vice-Dono']));
+      }
+
+      // Subcoleção members para notificações
+      match /members/{memberId} {
+        allow read: if request.auth != null;
+        allow write: if request.auth != null && 
+                       (request.auth.uid == get(/databases/$(database)/documents/guilds/$(guildId)).data.ownerId ||
+                        (request.auth.uid in get(/databases/$(database)/documents/guilds/$(guildId)).data.members.keys() &&
+                         get(/databases/$(database)/documents/guilds/$(guildId)).data.members[request.auth.uid] in ['Dono', 'Vice-Dono']));
+      }
+    }
+   
+    // COLEÇÃO DE SOLICITAÇÕES DE AMIZADE
+    match /friendRequests/{requestId} {
+      allow read: if request.auth != null && 
+                    (request.auth.uid == resource.data.senderId || 
+                     request.auth.uid == resource.data.receiverId);
+      allow create: if request.auth != null && 
+                      request.auth.uid == request.resource.data.senderId;
+      allow update, delete: if request.auth != null && 
+                              (request.auth.uid == resource.data.senderId || 
+                               request.auth.uid == resource.data.receiverId);
+    }
+   
+    // COLEÇÃO DE ITENS (LEITURA PÚBLICA)
+    match /items/{itemId} {
+      allow read: if request.auth != null;
+      allow create: if request.auth != null; 
+      allow update: if request.auth != null;
+      allow delete: if false;
+    }
+   
+    // COLEÇÃO GLOBAL DE CONVITES DE CARGO
+    match /guildRoleInvites/{inviteId} {
+      allow read: if request.auth != null && 
+                    (request.auth.uid == resource.data.targetUserId || 
+                     request.auth.uid == resource.data.invitedBy);
+      allow create: if request.auth != null && 
+                      request.auth.uid == request.resource.data.invitedBy;
+      allow update, delete: if request.auth != null && 
+                              (request.auth.uid == resource.data.targetUserId || 
+                               request.auth.uid == resource.data.invitedBy);
+    }
+
+    // OUTRAS COLEÇÕES
+    match /missions/{missionId} {
+      allow read: if request.auth != null;
+      allow write: if false;
+    }
+   
+    match /ranking/{rankingId} {
+      allow read: if request.auth != null;
+      allow write: if false;
+    }
+   
+    match /gameConfig/{configId} {
+      allow read: if request.auth != null;
+      allow write: if false;
+    }
+
+    // COLEÇÃO DE NOTIFICAÇÕES
+    match /notifications/{notificationId} {
+      allow read: if request.auth != null && request.auth.uid == resource.data.userId;
+      allow create: if request.auth != null;
+      allow update, delete: if request.auth != null && request.auth.uid == resource.data.userId;
+    }
+  }
+} 

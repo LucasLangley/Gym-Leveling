@@ -1,0 +1,53 @@
+name: gym_leveling
+description: "Um aplicativo de academia gamificado inspirado em Solo Leveling."
+publish_to: 'none' 
+
+version: 1.0.0+1
+
+environment:
+  sdk: '>=3.3.0 <4.0.0'
+
+dependencies:
+  flutter:
+    sdk: flutter
+  flutter_localizations:
+    sdk: flutter
+  shared_preferences: ^2.2.2
+  cupertino_icons: ^1.0.6
+
+  # Firebase
+  firebase_core: ^2.32.0
+  firebase_auth: ^4.19.5
+  cloud_firestore: ^4.17.3
+  firebase_storage: ^11.7.5
+  flutter_secure_storage: ^9.2.2
+  logger: ^2.0.2+1
+
+  # Interface e Estilo
+  flutter_svg: ^2.0.9
+  google_fonts: ^4.0.4
+
+  # Gerenciamento de Estado
+  provider: ^6.1.2
+
+  # Utilitários
+  intl: ^0.20.2
+  flip_card: ^0.7.0
+  http: ^1.1.0
+
+  # Imagens e Cache
+  cached_network_image: ^3.3.1
+  image_picker: ^1.1.2
+  cloudinary_public: ^0.23.1
+  # Removido image_cropper temporariamente devido a incompatibilidades com web
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+  flutter_lints: ^3.0.0
+
+flutter:
+  uses-material-design: true
+  generate: true
+  assets:
+    - assets/images/

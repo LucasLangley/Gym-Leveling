@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "53910571719",
+    "project_id": "gym-leveling",
+    "storage_bucket": "gym-leveling.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:53910571719:android:392065a41abb5672d64ce2",
+        "android_client_info": {
+          "package_name": "com.example.myapp"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyBoBysYXQI_ikQBjHs-NfH1NvyDWYN2_7A"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
